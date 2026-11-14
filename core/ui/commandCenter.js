@@ -4,11 +4,51 @@ import { checkForUpdates, getCurrentVersion, getLatestRelease, setUpdateBadgeCal
 import { registeredModules, getDisabledModuleIds, getModuleInfo, getMenuHotkey } from '../registry.js';
 import { STYLE_CONTENT } from './theme.js';
 
+const CATEGORY_DEFINITIONS = [
+    {
+        id: 'cat-lobby',
+        titleKey: 'Lobby & Queue',
+        subtitleKey: 'Matchmaking automation, custom lobbies, and queue controls.',
+        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/></svg>',
+        moduleIds: ['autoAccept', 'autoQueue', 'modeSelectorTweaks', 'lowPrioWarningSuppress', 'useClientDuringGame']
+    },
+    {
+        id: 'cat-champ-select',
+        titleKey: 'Champ Select',
+        subtitleKey: 'Dodge button, automatic runes/spells/items, pick/ban lock, and balance info.',
+        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L19 7V17L12 22L5 17V7L12 2Z"/><circle cx="12" cy="12" r="3"/></svg>',
+        moduleIds: ['champSelectQuitButton', 'autoRuneImporter', 'autoLockChampion', 'aramNocd', 'SnoozeBalanceTooltip']
+    },
+    {
+        id: 'cat-match',
+        titleKey: 'Match & Honor',
+        subtitleKey: 'Live lobby/game player analysis, post-game auto honor, and Arena progression.',
+        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>',
+        moduleIds: ['gameAnalysisPopup', 'autoHonor', 'arenaGod']
+    },
+    {
+        id: 'cat-profile',
+        titleKey: 'Profile & Client',
+        subtitleKey: 'Profile rank/background spoofing, custom status, social roster, loot, and window sizing.',
+        icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+        moduleIds: ['profileTweaks', 'customOnlineStatus', 'socialPanelTweaks', 'nameSpoofer', 'clientWindowTweaks', 'whaleHelper']
+    }
+];
+
 export const Modal = (function() {
     let _root = null;
     let _visible = false;
     let _keydownHandler = null;
     const _cbs = new Set();
+
+    function getHiddenModuleIds() {
+        const v = Utils.Store.get('core', 'hiddenModules');
+        return Array.isArray(v) ? new Set(v) : new Set();
+    }
+
+    function isModuleEnabled(mod) {
+        return (mod.settings || []).some(s => s.type === 'toggle' && s.value === true);
+    }
 
     function create() {
         const old = document.getElementById('pm-root');
@@ -32,14 +72,57 @@ export const Modal = (function() {
         const modal = document.createElement('div');
         modal.id = 'pm-modal';
 
+        // Header
         const header = document.createElement('div');
         header.className = 'pm-header';
-        header.innerHTML = '<h2 class="pm-title">' + t("HEX MANAGER") + '</h2>';
+
+        const brandGroup = document.createElement('div');
+        brandGroup.className = 'hm-brand-group';
+        brandGroup.innerHTML = `
+            <span class="hm-brand-crest">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L20 7V17L12 22L4 17V7L12 2Z" stroke="#c8aa6e" stroke-width="1.8"/>
+                    <path d="M12 6.5L16.5 9.25V14.75L12 17.5L7.5 14.75V9.25L12 6.5Z" fill="#c8aa6e" fill-opacity="0.25" stroke="#c8aa6e" stroke-width="1.2"/>
+                </svg>
+            </span>
+            <h2 class="pm-title">${t("HEX MANAGER")}</h2>
+        `;
+
+        const activeBadge = document.createElement('span');
+        activeBadge.className = 'hm-active-badge';
+        brandGroup.appendChild(activeBadge);
+
+        const searchWrap = document.createElement('div');
+        searchWrap.className = 'hm-header-search-wrap';
+        searchWrap.innerHTML = `
+            <span class="hm-header-search-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+        `;
+        const modSearchInput = document.createElement('input');
+        modSearchInput.id = 'hm-mod-search';
+        modSearchInput.type = 'text';
+        modSearchInput.placeholder = t('Filter modules & settings...');
+        searchWrap.appendChild(modSearchInput);
+
+        const headerRight = document.createElement('div');
+        headerRight.className = 'hm-header-right';
+
+        const hotkeyPill = document.createElement('span');
+        hotkeyPill.className = 'hm-hotkey-pill';
+        hotkeyPill.textContent = getMenuHotkey()?.display || 'F1';
+
         const closeBtn = document.createElement('button');
         closeBtn.className = 'pm-close';
-        closeBtn.innerHTML = t('✕');
+        closeBtn.innerHTML = '✕';
         closeBtn.addEventListener('click', () => hide());
-        header.appendChild(closeBtn);
+
+        headerRight.appendChild(hotkeyPill);
+        headerRight.appendChild(closeBtn);
+
+        header.appendChild(brandGroup);
+        header.appendChild(searchWrap);
+        header.appendChild(headerRight);
         modal.appendChild(header);
 
         const body = document.createElement('div');
@@ -55,12 +138,27 @@ export const Modal = (function() {
         body.appendChild(content);
         modal.appendChild(body);
 
-        let activeTabId = 'tab-lookup';
+        let activeTabId = 'cat-lobby';
+        const categoryBadges = new Map();
+
+        function updateCounters() {
+            const validMods = registeredModules.filter(m => m.settings && m.settings.length > 0);
+            const activeTotal = validMods.filter(isModuleEnabled).length;
+            activeBadge.textContent = `${activeTotal}/${validMods.length} ${t('Active')}`;
+
+            for (const cat of CATEGORY_DEFINITIONS) {
+                const badgeEl = categoryBadges.get(cat.id);
+                if (!badgeEl) continue;
+                const catMods = validMods.filter(m => cat.moduleIds.includes(m.id));
+                const enabledCount = catMods.filter(isModuleEnabled).length;
+                badgeEl.textContent = `${enabledCount}/${catMods.length}`;
+            }
+        }
 
         function switchTab(tabId) {
             activeTabId = tabId;
-            sidebar.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
-            content.querySelectorAll('.pm-tab-content').forEach(c => c.classList.remove('active'));
+            sidebar.querySelectorAll('.pm-tab').forEach(el => el.classList.remove('active'));
+            content.querySelectorAll('.pm-tab-content').forEach(el => el.classList.remove('active'));
 
             const tab = sidebar.querySelector(`[data-target="${tabId}"]`);
             const tabContent = content.querySelector(`#${tabId}`);
@@ -68,62 +166,72 @@ export const Modal = (function() {
             if (tabContent) tabContent.classList.add('active');
         }
 
-        function createTab(id, title, isActive = false) {
+        function createSidebarTab({ id, title, iconHtml, countBadge = false, isActive = false, extraClass = '', onClick }) {
             const tab = document.createElement('div');
-            tab.className = 'pm-tab' + (isActive ? ' active' : '');
+            tab.className = 'pm-tab' + (isActive ? ' active' : '') + (extraClass ? ' ' + extraClass : '');
             tab.setAttribute('data-target', id);
-            tab.textContent = title;
-            tab.addEventListener('click', () => switchTab(id));
+
+            const left = document.createElement('div');
+            left.className = 'hm-tab-left';
+            left.innerHTML = `<span class="hm-tab-icon">${iconHtml}</span><span>${title}</span>`;
+            tab.appendChild(left);
+
+            if (countBadge) {
+                const countEl = document.createElement('span');
+                countEl.className = 'hm-tab-count';
+                countEl.textContent = '0/0';
+                tab.appendChild(countEl);
+                categoryBadges.set(id, countEl);
+            }
+
+            tab.addEventListener('click', () => {
+                if (modSearchInput.value) {
+                    modSearchInput.value = '';
+                }
+                switchTab(id);
+                if (typeof onClick === 'function') onClick();
+            });
             sidebar.appendChild(tab);
+            return tab;
         }
 
-        // Search Section (Player Lookup)
-        createTab('tab-lookup', t('Player Lookup'), true);
+        // 1. Player Lookup Tab (cat-lookup)
+        createSidebarTab({
+            id: 'cat-lookup',
+            title: t('Player Lookup'),
+            iconHtml: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+            isActive: false
+        });
 
         const lookupContent = document.createElement('div');
-        lookupContent.id = 'tab-lookup';
-        lookupContent.className = 'pm-tab-content active';
+        lookupContent.id = 'cat-lookup';
+        lookupContent.className = 'pm-tab-content';
         lookupContent.innerHTML = `
-      <div class="pm-section-title">${t("Player Lookup")}</div>
-      <div style="color:#a09b8c; font-size:13px; margin-bottom:20px; line-height:1.5;">${t("Instantly look up match history for any player on any game mode using their Riot ID (Name#Tag).")}</div>
-    `;
+            <div class="pm-section-title">${t("Player Lookup")}</div>
+            <div class="hm-cat-subtitle">${t("Instantly look up match history for any player on any game mode using their Riot ID (Name#Tag).")}</div>
+        `;
 
         const searchRow = document.createElement('div');
         searchRow.className = 'pm-search';
 
         const regionSelect = document.createElement('select');
         Object.assign(regionSelect.style, {
-            background: '#111',
+            background: '#050e17',
             color: '#f0e6d2',
-            border: '1px solid #3e2e13',
+            border: '1px solid #463714',
             padding: '8px 12px',
             borderRadius: '2px',
             outline: 'none',
             fontSize: '13px',
             cursor: 'pointer'
         });
-        const regions = [{
-                label: t('Local Region'),
-                value: ''
-            },
-            {
-                label: t('Americas (NA/BR/LAN/LAS)'),
-                value: 'NA1'
-            },
-            {
-                label: t('Europe (EUW/EUNE/TR/RU)'),
-                value: 'EUW'
-            },
-            {
-                label: t('Asia (KR/JP)'),
-                value: 'KR'
-            },
-            {
-                label: t('SEA / OCE'),
-                value: 'SG2'
-            }
-        ];
-        regions.forEach(r => {
+        [
+            { label: t('Local Region'), value: '' },
+            { label: t('Americas (NA/BR/LAN/LAS)'), value: 'NA1' },
+            { label: t('Europe (EUW/EUNE/TR/RU)'), value: 'EUW' },
+            { label: t('Asia (KR/JP)'), value: 'KR' },
+            { label: t('SEA / OCE'), value: 'SG2' }
+        ].forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.value;
             opt.textContent = r.label;
@@ -166,21 +274,14 @@ export const Modal = (function() {
                 const gameName = me.gameName || me.displayName || '';
                 const tagLine = me.tagLine || '';
                 const full = await Utils.LCU.get('/lol-summoner/v2/summoners/puuid/' + me.puuid).catch(() => null);
-                const finalPlayer = {
-                    ...me,
-                    ...(full || {}),
-                    gameName,
-                    tagLine
-                };
+                const finalPlayer = { ...me, ...(full || {}), gameName, tagLine };
 
                 resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
                 import('../../modules/gameAnalysisPopup.js').then(mod => {
                     mod.MatchHistoryModal.show(finalPlayer, '');
                 });
-                setTimeout(() => {
-                    resultDiv.innerHTML = '';
-                }, 1000);
-            } catch (e) {
+                setTimeout(() => { resultDiv.innerHTML = ''; }, 1000);
+            } catch (_) {
                 resultDiv.innerHTML = '<div style="color:#d92323">' + t('Error looking up your account') + '</div>';
             }
         });
@@ -188,36 +289,25 @@ export const Modal = (function() {
         searchBtn.addEventListener('click', async () => {
             const input = searchInput.value.trim();
             const selectedRegion = regionSelect.value || null;
-
             if (!input) {
                 resultDiv.innerHTML = '<div style="color:#d92323">' + t('Please enter a name') + '</div>';
                 return;
             }
-
             resultDiv.innerHTML = '<div style="color:#c8aa6e">' + t('Searching...') + '</div>';
             try {
                 let puuidToUse = null;
                 let finalPlayer = null;
-
-                // lookup handling
                 if (input.includes('#')) {
                     const parts = input.split('#');
                     if (parts.length === 2 && parts[0] && parts[1]) {
-                        const gameName = parts[0];
-                        const tagLine = parts[1];
+                        const [gameName, tagLine] = parts;
                         const alias = await Utils.LCU.get('/lol-summoner/v1/alias/lookup?gameName=' + encodeURIComponent(gameName) + '&tagLine=' + encodeURIComponent(tagLine)).catch(() => null);
-
                         if (alias && alias.puuid) {
                             puuidToUse = alias.puuid;
-                            finalPlayer = {
-                                ...alias,
-                                gameName,
-                                tagLine
-                            };
+                            finalPlayer = { ...alias, gameName, tagLine };
                         }
                     }
                 } else {
-                    // Try looking up by old summoner name
                     const sumObj = await Utils.LCU.get('/lol-summoner/v1/summoners?name=' + encodeURIComponent(input)).catch(() => null);
                     if (sumObj && sumObj.puuid) {
                         puuidToUse = sumObj.puuid;
@@ -228,12 +318,8 @@ export const Modal = (function() {
                 if (puuidToUse && finalPlayer) {
                     try {
                         const full = await Utils.LCU.get('/lol-summoner/v2/summoners/puuid/' + puuidToUse).catch(() => null);
-                        if (full) finalPlayer = {
-                            ...finalPlayer,
-                            ...full
-                        };
-                    } catch (e) {}
-
+                        if (full) finalPlayer = { ...finalPlayer, ...full };
+                    } catch (_) {}
                     resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
                     import('../../modules/gameAnalysisPopup.js').then(mod => {
                         mod.MatchHistoryModal.show(finalPlayer, '', selectedRegion);
@@ -245,7 +331,7 @@ export const Modal = (function() {
                 } else {
                     resultDiv.innerHTML = '<div style="color:#d92323">' + t('Player not found') + '</div>';
                 }
-            } catch (e) {
+            } catch (_) {
                 resultDiv.innerHTML = '<div style="color:#d92323">' + t('Error looking up player') + '</div>';
             }
         });
@@ -258,185 +344,280 @@ export const Modal = (function() {
         lookupContent.appendChild(resultDiv);
         content.appendChild(lookupContent);
 
-        // Modules Sections
-        registeredModules.sort((a, b) => a.name.localeCompare(b.name));
+        // Helper to build a single Hextech Module Card
+        function buildModuleCard(mod) {
+            const card = document.createElement('div');
+            card.className = 'hm-mod-card' + (isModuleEnabled(mod) ? ' is-enabled' : '');
+            card.setAttribute('data-mod-id', mod.id);
 
-        function getHiddenModuleIds() {
-            const v = Utils.Store.get('core', 'hiddenModules');
-            return Array.isArray(v) ? new Set(v) : new Set();
+            const cardHeader = document.createElement('div');
+            cardHeader.className = 'hm-mod-card-header';
+
+            const info = document.createElement('div');
+            info.className = 'hm-mod-info';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'hm-mod-title';
+            titleEl.textContent = mod.name;
+
+            const descEl = document.createElement('div');
+            descEl.className = 'hm-mod-desc';
+            descEl.textContent = mod.description || '';
+
+            info.appendChild(titleEl);
+            if (mod.description) info.appendChild(descEl);
+            cardHeader.appendChild(info);
+
+            const settings = mod.settings || [];
+            const primaryToggle = settings.find(s => s.type === 'toggle');
+            const extraSettings = settings.filter(s => s !== primaryToggle);
+
+            if (primaryToggle) {
+                const sw = document.createElement('button');
+                sw.type = 'button';
+                sw.className = 'hm-hex-switch ' + (primaryToggle.value ? 'on' : 'off');
+
+                const togglePrimary = (e) => {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    const nextVal = !primaryToggle.value;
+                    primaryToggle.value = nextVal;
+                    if (primaryToggle.onChange) primaryToggle.onChange(nextVal);
+                    sw.className = 'hm-hex-switch ' + (nextVal ? 'on' : 'off');
+                    card.classList.toggle('is-enabled', isModuleEnabled(mod));
+                    updateCounters();
+                };
+
+                sw.addEventListener('click', togglePrimary);
+                cardHeader.addEventListener('click', togglePrimary);
+                cardHeader.appendChild(sw);
+            }
+
+            card.appendChild(cardHeader);
+
+            if (extraSettings.length > 0) {
+                const cardBody = document.createElement('div');
+                cardBody.className = 'hm-mod-body';
+
+                extraSettings.forEach(setting => {
+                    if (setting.type === 'toggle') {
+                        const row = document.createElement('div');
+                        row.className = 'pm-row';
+                        row.style.cursor = 'pointer';
+
+                        const lblWrapper = document.createElement('div');
+                        lblWrapper.className = 'pm-label-wrapper';
+                        const lblTitle = document.createElement('div');
+                        lblTitle.className = 'pm-label-title';
+                        lblTitle.textContent = setting.label || mod.name;
+                        lblWrapper.appendChild(lblTitle);
+
+                        const sw = document.createElement('button');
+                        sw.type = 'button';
+                        sw.className = 'hm-hex-switch ' + (setting.value ? 'on' : 'off');
+
+                        const toggleSub = (e) => {
+                            if (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                            const nextVal = !setting.value;
+                            setting.value = nextVal;
+                            if (setting.onChange) setting.onChange(nextVal);
+                            sw.className = 'hm-hex-switch ' + (nextVal ? 'on' : 'off');
+                            card.classList.toggle('is-enabled', isModuleEnabled(mod));
+                            updateCounters();
+                        };
+
+                        sw.addEventListener('click', toggleSub);
+                        row.addEventListener('click', toggleSub);
+                        row.appendChild(lblWrapper);
+                        row.appendChild(sw);
+                        cardBody.appendChild(row);
+                    } else if (setting.type === 'select') {
+                        const row = document.createElement('div');
+                        row.className = 'pm-row';
+
+                        const select = document.createElement('select');
+                        Object.assign(select.style, {
+                            background: '#050e17',
+                            color: '#f0e6d2',
+                            border: '1px solid #463714',
+                            padding: '7px 10px',
+                            borderRadius: '2px',
+                            flex: '1',
+                            outline: 'none',
+                            fontSize: '13px'
+                        });
+
+                        setting.options.forEach(opt => {
+                            const el = document.createElement('option');
+                            el.value = opt.value;
+                            el.textContent = opt.label;
+                            select.appendChild(el);
+                        });
+
+                        select.value = setting.value;
+                        select.addEventListener('change', (e) => {
+                            if (setting.onChange) setting.onChange(e.target.value);
+                        });
+
+                        row.appendChild(select);
+                        cardBody.appendChild(row);
+                    } else if (setting.type === 'textarea') {
+                        const row = document.createElement('div');
+                        row.className = 'pm-row';
+
+                        const input = document.createElement('textarea');
+                        input.placeholder = setting.placeholder || '';
+                        Object.assign(input.style, {
+                            background: '#050e17',
+                            color: '#f0e6d2',
+                            border: '1px solid #463714',
+                            padding: '8px 12px',
+                            borderRadius: '2px',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            width: '100%',
+                            minHeight: '68px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            fontSize: '13px'
+                        });
+
+                        input.value = setting.value || '';
+                        input.addEventListener('change', (e) => {
+                            if (setting.onChange) setting.onChange(e.target.value);
+                        });
+                        input.addEventListener('click', (ev) => ev.stopPropagation());
+
+                        row.appendChild(input);
+                        cardBody.appendChild(row);
+                    } else if (setting.type === 'custom') {
+                        const row = document.createElement('div');
+                        row.className = 'pm-row';
+                        row.style.background = 'transparent';
+                        row.style.border = 'none';
+                        row.style.padding = '2px 0';
+
+                        if (setting.render) {
+                            setting.render(row);
+                        }
+                        cardBody.appendChild(row);
+                    }
+                });
+
+                card.appendChild(cardBody);
+            }
+
+            return card;
         }
 
-        function isModuleEnabled(mod) {
-            return (mod.settings || []).some(s => s.type === 'toggle' && s.value === true);
-        }
+        // 2. Build the 4 Feature Category Tabs
+        const assignedModIds = new Set();
+        CATEGORY_DEFINITIONS.forEach((cat, idx) => {
+            createSidebarTab({
+                id: cat.id,
+                title: t(cat.titleKey),
+                iconHtml: cat.icon,
+                countBadge: true,
+                isActive: idx === 0
+            });
 
-        registeredModules.forEach(mod => {
-            if (!mod.settings || mod.settings.length === 0) return;
+            const catPane = document.createElement('div');
+            catPane.id = cat.id;
+            catPane.className = 'pm-tab-content' + (idx === 0 ? ' active' : '');
+
+            const title = document.createElement('div');
+            title.className = 'pm-section-title';
+            title.textContent = t(cat.titleKey);
+
+            const sub = document.createElement('div');
+            sub.className = 'hm-cat-subtitle';
+            sub.textContent = t(cat.subtitleKey);
+
+            const grid = document.createElement('div');
+            grid.className = 'hm-mod-grid';
 
             const hiddenIds = getHiddenModuleIds();
-            const isHidden = hiddenIds.has(mod.id);
-
-            const tabId = 'tab-' + mod.id;
-            createTab(tabId, mod.name);
-
-            const tabEl = sidebar.querySelector(`[data-target="${tabId}"]`);
-            if (tabEl && isHidden) tabEl.style.display = 'none';
-
-            const tabContent = document.createElement('div');
-            tabContent.id = tabId;
-            tabContent.className = 'pm-tab-content';
-
-            const modTitle = document.createElement('div');
-            modTitle.className = 'pm-section-title';
-            modTitle.textContent = mod.name;
-
-            const modDesc = document.createElement('div');
-            Object.assign(modDesc.style, {
-                color: '#a09b8c',
-                fontSize: '13px',
-                marginBottom: '20px',
-                lineHeight: '1.5'
+            cat.moduleIds.forEach(modId => {
+                assignedModIds.add(modId);
+                const mod = registeredModules.find(m => m.id === modId);
+                if (!mod || !mod.settings || mod.settings.length === 0) return;
+                const card = buildModuleCard(mod);
+                if (hiddenIds.has(mod.id)) card.style.display = 'none';
+                grid.appendChild(card);
             });
-            modDesc.textContent = mod.description;
 
-            tabContent.appendChild(modTitle);
-            tabContent.appendChild(modDesc);
+            // Include any additional registered modules not yet assigned to a category in the last category
+            if (idx === CATEGORY_DEFINITIONS.length - 1) {
+                registeredModules.forEach(mod => {
+                    if (assignedModIds.has(mod.id) || !mod.settings || mod.settings.length === 0) return;
+                    const card = buildModuleCard(mod);
+                    if (hiddenIds.has(mod.id)) card.style.display = 'none';
+                    grid.appendChild(card);
+                });
+            }
 
-            mod.settings.forEach(setting => {
-                if (setting.type === 'toggle') {
-                    const row = document.createElement('div');
-                    row.className = 'pm-row';
-
-                    const lblWrapper = document.createElement('div');
-                    lblWrapper.className = 'pm-label-wrapper';
-                    const lblTitle = document.createElement('div');
-                    lblTitle.className = 'pm-label-title';
-                    lblTitle.textContent = setting.label || mod.name;
-                    lblWrapper.appendChild(lblTitle);
-
-                    const sw = document.createElement('button');
-                    sw.type = 'button';
-                    sw.className = 'pm-toggle-btn ' + (setting.value ? 'on' : 'off');
-
-                    const toggleFn = (e) => {
-                        if (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }
-                        const v = !setting.value;
-                        setting.value = v;
-                        if (setting.onChange) setting.onChange(v);
-                        sw.className = 'pm-toggle-btn ' + (v ? 'on' : 'off');
-                    };
-                    sw.onclick = toggleFn;
-                    row.onclick = toggleFn;
-                    row.style.cursor = 'pointer';
-
-                    row.appendChild(lblWrapper);
-                    row.appendChild(sw);
-                    tabContent.appendChild(row);
-                } else if (setting.type === 'select') {
-                    const row = document.createElement('div');
-                    row.className = 'pm-row';
-                    row.style.background = 'transparent';
-                    row.style.padding = '0 16px 16px';
-                    row.style.border = 'none';
-                    row.style.marginBottom = '0';
-
-                    const select = document.createElement('select');
-                    Object.assign(select.style, {
-                        background: '#111',
-                        color: '#f0e6d2',
-                        border: '1px solid #3e2e13',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        flex: '1',
-                        outline: 'none',
-                        fontSize: '14px'
-                    });
-
-                    setting.options.forEach(opt => {
-                        const el = document.createElement('option');
-                        el.value = opt.value;
-                        el.textContent = opt.label;
-                        select.appendChild(el);
-                    });
-
-                    select.value = setting.value;
-                    select.addEventListener('change', (e) => {
-                        if (setting.onChange) setting.onChange(e.target.value);
-                    });
-
-                    row.appendChild(select);
-                    tabContent.appendChild(row);
-                } else if (setting.type === 'textarea') {
-                    const row = document.createElement('div');
-                    row.className = 'pm-row';
-                    row.style.background = 'transparent';
-                    row.style.padding = '0 16px 16px';
-                    row.style.border = 'none';
-                    row.style.marginBottom = '0';
-
-                    const input = document.createElement('textarea');
-                    input.placeholder = setting.placeholder || '';
-                    Object.assign(input.style, {
-                        background: '#111',
-                        color: '#f0e6d2',
-                        border: '1px solid #3e2e13',
-                        padding: '10px 14px',
-                        borderRadius: '4px',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        width: '100%',
-                        minHeight: '80px',
-                        resize: 'vertical',
-                        fontFamily: 'inherit',
-                        fontSize: '14px'
-                    });
-
-                    input.value = setting.value || '';
-                    input.addEventListener('change', (e) => {
-                        if (setting.onChange) setting.onChange(e.target.value);
-                    });
-                    input.addEventListener('click', (ev) => ev.stopPropagation());
-
-                    row.appendChild(input);
-                    tabContent.appendChild(row);
-                } else if (setting.type === 'custom') {
-                    const row = document.createElement('div');
-                    row.className = 'pm-row';
-                    row.style.background = 'transparent';
-                    row.style.padding = '0 16px 16px';
-                    row.style.border = 'none';
-                    row.style.marginBottom = '0';
-
-                    if (setting.render) {
-                        setting.render(row);
-                    }
-
-                    tabContent.appendChild(row);
-                }
-            });
-            content.appendChild(tabContent);
+            catPane.appendChild(title);
+            catPane.appendChild(sub);
+            catPane.appendChild(grid);
+            content.appendChild(catPane);
         });
 
-        // Settings Tab
-        const settingsTabId = 'tab-settings';
+        // Search Results Pane
+        const searchPane = document.createElement('div');
+        searchPane.id = 'cat-search-results';
+        searchPane.className = 'pm-tab-content';
+        const searchTitle = document.createElement('div');
+        searchTitle.className = 'pm-section-title';
+        searchTitle.textContent = t('Search Results');
+        const searchSub = document.createElement('div');
+        searchSub.className = 'hm-cat-subtitle';
+        const searchGrid = document.createElement('div');
+        searchGrid.className = 'hm-mod-grid';
+        searchPane.appendChild(searchTitle);
+        searchPane.appendChild(searchSub);
+        searchPane.appendChild(searchGrid);
+        content.appendChild(searchPane);
 
-        const settingsTab = document.createElement('div');
-        settingsTab.className = 'pm-tab pm-tab-settings';
-        settingsTab.setAttribute('data-target', settingsTabId);
-        settingsTab.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>${t('Settings')}`;
-        settingsTab.addEventListener('click', () => {
-            switchTab(settingsTabId);
-            buildSettingsContent(settingsTabContent);
+        modSearchInput.addEventListener('input', () => {
+            const q = modSearchInput.value.trim().toLowerCase();
+            if (!q) {
+                switchTab(activeTabId === 'cat-search-results' ? 'cat-lobby' : activeTabId);
+                return;
+            }
+            content.querySelectorAll('.pm-tab-content').forEach(el => el.classList.remove('active'));
+            searchPane.classList.add('active');
+            searchGrid.innerHTML = '';
+
+            const hiddenIds = getHiddenModuleIds();
+            const matches = registeredModules.filter(m => {
+                if (!m.settings || m.settings.length === 0 || hiddenIds.has(m.id)) return false;
+                const text = `${m.name || ''} ${m.description || ''} ${(m.settings || []).map(s => s.label || '').join(' ')}`.toLowerCase();
+                return text.includes(q);
+            });
+
+            searchSub.textContent = `${matches.length} ${t('modules matched')} "${modSearchInput.value.trim()}"`;
+            matches.forEach(m => searchGrid.appendChild(buildModuleCard(m)));
         });
-        sidebar.appendChild(settingsTab);
 
+        // 3. System Settings Tab (cat-settings)
+        const settingsTabId = 'cat-settings';
         const settingsTabContent = document.createElement('div');
         settingsTabContent.id = settingsTabId;
         settingsTabContent.className = 'pm-tab-content';
         content.appendChild(settingsTabContent);
+
+        createSidebarTab({
+            id: settingsTabId,
+            title: t('System Settings'),
+            iconHtml: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+            extraClass: 'pm-tab-settings',
+            onClick: () => buildSettingsContent(settingsTabContent)
+        });
 
         function buildSettingsContent(container) {
             container.innerHTML = '';
@@ -444,7 +625,6 @@ export const Modal = (function() {
             const wrap = document.createElement('div');
             wrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
 
-            // Section helper
             function makeSettingsSection(title, desc) {
                 const section = document.createElement('div');
                 section.className = 'pm-settings-section';
@@ -461,16 +641,15 @@ export const Modal = (function() {
                 return section;
             }
 
-            // Pill toggle helper
             function makeSettingsToggle(initialValue, onChange) {
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'pm-toggle-btn ' + (initialValue ? 'on' : 'off');
+                btn.className = 'hm-hex-switch ' + (initialValue ? 'on' : 'off');
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     const next = !btn.classList.contains('on');
-                    btn.className = 'pm-toggle-btn ' + (next ? 'on' : 'off');
+                    btn.className = 'hm-hex-switch ' + (next ? 'on' : 'off');
                     onChange(next);
                 });
                 return btn;
@@ -487,8 +666,8 @@ export const Modal = (function() {
 
             const languageSelect = document.createElement('select');
             Object.assign(languageSelect.style, {
-                background: '#111', color: '#f0e6d2', border: '1px solid #3e2e13',
-                padding: '6px 12px', borderRadius: '4px', outline: 'none',
+                background: '#050e17', color: '#f0e6d2', border: '1px solid #463714',
+                padding: '6px 12px', borderRadius: '2px', outline: 'none',
                 fontSize: '13px', cursor: 'pointer'
             });
 
@@ -500,10 +679,7 @@ export const Modal = (function() {
                 languageSelect.appendChild(opt);
             }
 
-            languageSelect.addEventListener('change', (e) => {
-                setLanguage(e.target.value);
-            });
-
+            languageSelect.addEventListener('change', (e) => setLanguage(e.target.value));
             languageRow.appendChild(languageLabel);
             languageRow.appendChild(languageSelect);
             generalSection.appendChild(languageRow);
@@ -519,13 +695,11 @@ export const Modal = (function() {
             hotkeyBtn.style.minWidth = '140px';
 
             let currentHotkey = getMenuHotkey();
-
             hotkeyBtn.textContent = currentHotkey.display;
 
             hotkeyBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 if (window._isCapturingHotkey) return;
-
                 window._isCapturingHotkey = true;
                 hotkeyBtn.textContent = t('Press keys...');
                 hotkeyBtn.style.borderColor = '#0ac8b9';
@@ -533,15 +707,9 @@ export const Modal = (function() {
 
                 const cleanup = () => {
                     window._isCapturingHotkey = false;
-                    document.removeEventListener('keydown', onKeyDown, {
-                        capture: true
-                    });
-                    document.removeEventListener('keyup', onKeyUp, {
-                        capture: true
-                    });
-                    document.removeEventListener('mousedown', onMouseDown, {
-                        capture: true
-                    });
+                    document.removeEventListener('keydown', onKeyDown, { capture: true });
+                    document.removeEventListener('keyup', onKeyUp, { capture: true });
+                    document.removeEventListener('mousedown', onMouseDown, { capture: true });
                     hotkeyBtn.style.borderColor = '';
                     hotkeyBtn.style.color = '';
                 };
@@ -549,9 +717,7 @@ export const Modal = (function() {
                 const onKeyDown = (ev) => {
                     ev.preventDefault();
                     ev.stopPropagation();
-
                     const isModifier = ['Control', 'Shift', 'Alt', 'Meta'].includes(ev.key);
-
                     const parts = [];
                     if (ev.ctrlKey) parts.push('Ctrl');
                     if (ev.shiftKey) parts.push('Shift');
@@ -559,18 +725,15 @@ export const Modal = (function() {
                     if (ev.metaKey) parts.push('Win/Cmd');
 
                     if (!isModifier) {
-                        // Cancel capture on Escape without modifiers
                         if (ev.code === 'Escape' && parts.length === 0) {
                             hotkeyBtn.textContent = currentHotkey.display;
                             cleanup();
                             return;
                         }
-
                         let keyName = ev.code;
                         if (keyName.startsWith('Key')) keyName = keyName.slice(3);
                         else if (keyName.startsWith('Digit')) keyName = keyName.slice(5);
                         else if (keyName === 'Space') keyName = 'Space';
-
                         parts.push(keyName);
 
                         if (parts.length > 3) {
@@ -583,7 +746,7 @@ export const Modal = (function() {
                             return;
                         }
 
-                        const newHotkey = {
+                        currentHotkey = {
                             ctrlKey: ev.ctrlKey,
                             shiftKey: ev.shiftKey,
                             altKey: ev.altKey,
@@ -591,10 +754,9 @@ export const Modal = (function() {
                             code: ev.code,
                             display: parts.join(' + ')
                         };
-
-                        currentHotkey = newHotkey;
                         Utils.Store.set('core', 'hotkeyObj', currentHotkey);
                         hotkeyBtn.textContent = currentHotkey.display;
+                        hotkeyPill.textContent = currentHotkey.display;
                         cleanup();
                     } else {
                         hotkeyBtn.textContent = parts.join(' + ') + ' + ...';
@@ -607,16 +769,14 @@ export const Modal = (function() {
                     const isModifier = ['Control', 'Shift', 'Alt', 'Meta'].includes(ev.key);
                     if (isModifier && window._isCapturingHotkey) {
                         if (!ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) {
-                hotkeyBtn.textContent = t('Press keys...');
+                            hotkeyBtn.textContent = t('Press keys...');
                         } else {
                             const parts = [];
                             if (ev.ctrlKey) parts.push('Ctrl');
                             if (ev.shiftKey) parts.push('Shift');
                             if (ev.altKey) parts.push('Alt');
                             if (ev.metaKey) parts.push('Win/Cmd');
-                            if (parts.length > 0) {
-                                hotkeyBtn.textContent = parts.join(' + ') + ' + ...';
-                            }
+                            if (parts.length > 0) hotkeyBtn.textContent = parts.join(' + ') + ' + ...';
                         }
                     }
                 };
@@ -628,15 +788,9 @@ export const Modal = (function() {
                     }
                 };
 
-                document.addEventListener('keydown', onKeyDown, {
-                    capture: true
-                });
-                document.addEventListener('keyup', onKeyUp, {
-                    capture: true
-                });
-                document.addEventListener('mousedown', onMouseDown, {
-                    capture: true
-                });
+                document.addEventListener('keydown', onKeyDown, { capture: true });
+                document.addEventListener('keyup', onKeyUp, { capture: true });
+                document.addEventListener('mousedown', onMouseDown, { capture: true });
             });
 
             hotkeyRow.appendChild(hotkeyLabel);
@@ -644,14 +798,13 @@ export const Modal = (function() {
             generalSection.appendChild(hotkeyRow);
             wrap.appendChild(generalSection);
 
-            // Updates Section 
+            // Updates Section
             const updateSection = makeSettingsSection(
                 t('Updates'),
                 t('Check GitHub for new Hex-Manager releases.')
             );
 
             const autoCheckEnabled = Utils.Store.get('core', 'checkUpdates') !== false;
-
             const autoCheckRow = document.createElement('div');
             autoCheckRow.className = 'pm-settings-row';
             const autoCheckLabel = document.createElement('span');
@@ -664,35 +817,35 @@ export const Modal = (function() {
             autoCheckRow.appendChild(autoCheckToggle);
             updateSection.appendChild(autoCheckRow);
 
-            // Status area
             const updateStatusEl = document.createElement('div');
             updateStatusEl.className = 'pm-update-status' + (getLatestRelease() ? ' has-update' : '');
 
             function renderUpdateStatus() {
+                const rel = getLatestRelease();
                 updateStatusEl.innerHTML = '';
-                updateStatusEl.className = 'pm-update-status' + (getLatestRelease() ? ' has-update' : '');
-                if (getLatestRelease()) {
+                updateStatusEl.className = 'pm-update-status' + (rel ? ' has-update' : '');
+                if (rel) {
                     const title = document.createElement('div');
                     title.className = 'pm-update-title';
-                    title.textContent = t("Update available: v{{version}}", { version: getLatestRelease().version });
+                    title.textContent = t("Update available: v{{version}}", { version: rel.version });
                     updateStatusEl.appendChild(title);
 
                     const relName = document.createElement('div');
                     relName.className = 'pm-update-rel-name';
-                    relName.textContent = getLatestRelease().name;
+                    relName.textContent = rel.name;
                     updateStatusEl.appendChild(relName);
 
-                    if (getLatestRelease().body) {
+                    if (rel.body) {
                         const notes = document.createElement('div');
                         notes.className = 'pm-update-notes';
-                        notes.textContent = getLatestRelease().body;
+                        notes.textContent = rel.body;
                         updateStatusEl.appendChild(notes);
                     }
 
                     const linkRow = document.createElement('div');
                     linkRow.style.cssText = 'display:flex;gap:8px;align-items:center;';
                     const link = document.createElement('a');
-                    link.href = getLatestRelease().url;
+                    link.href = rel.url;
                     link.target = '_blank';
                     link.className = 'pm-update-link';
                     link.textContent = t('View release on GitHub');
@@ -700,7 +853,7 @@ export const Modal = (function() {
                     updateStatusEl.appendChild(linkRow);
                 } else {
                     const span = document.createElement('span');
-                    span.style.color = '#3a5060';
+                    span.style.color = '#7e7968';
                     span.textContent = t("Current version: v{{version}} - up to date", { version: getCurrentVersion() });
                     updateStatusEl.appendChild(span);
                 }
@@ -708,19 +861,13 @@ export const Modal = (function() {
 
             renderUpdateStatus();
             updateSection.appendChild(updateStatusEl);
-
-            // Live badge callback: update status box if tab is open when bg check finishes
             setUpdateBadgeCallback(renderUpdateStatus);
 
-            // Check now button
             const checkBtnRow = document.createElement('div');
             checkBtnRow.className = 'pm-update-check-row';
-
             const checkBtn = document.createElement('button');
             checkBtn.className = 'pm-btn';
-            checkBtn.style.cssText = 'font-size:12px;padding:5px 12px;';
             checkBtn.textContent = t('Check now');
-
             const checkStatus = document.createElement('span');
             checkStatus.className = 'pm-update-check-status';
 
@@ -733,9 +880,7 @@ export const Modal = (function() {
                 checkBtn.disabled = false;
                 checkBtn.textContent = t('Check now');
                 checkStatus.textContent = getLatestRelease() ? '' : t('Already up to date');
-                setTimeout(() => {
-                    checkStatus.textContent = '';
-                }, 3000);
+                setTimeout(() => { checkStatus.textContent = ''; }, 3000);
             });
 
             checkBtnRow.appendChild(checkBtn);
@@ -743,56 +888,36 @@ export const Modal = (function() {
             updateSection.appendChild(checkBtnRow);
             wrap.appendChild(updateSection);
 
-            // About Section 
+            // About Section
             const aboutSection = makeSettingsSection(t('About'), '');
-
             const aboutContent = document.createElement('div');
-            aboutContent.style.cssText = 'font-size:12px;color:#3a5060;line-height:1.8;margin-top:8px;';
-
-            const aboutLines = [{
-                    label: t('Plugin:'),
-                    value: t('Hex-Manager by Triggered0')
-                },
-                {
-                    label: t('Version:'),
-                    value: `v${getCurrentVersion()}`
-                },
-                {
-                    label: t('GitHub:'),
-                    value: 'github.com/Triggered0/Hex-Manager',
-                    href: 'https://github.com/Triggered0/Hex-Manager'
-                },
-            ];
-
-            aboutLines.forEach(({
-                label,
-                value,
-                href
-            }) => {
+            aboutContent.style.cssText = 'font-size:12px;color:#8c8778;line-height:1.8;margin-top:6px;';
+            [
+                { label: t('Plugin:'), value: t('Hex-Manager by Triggered0') },
+                { label: t('Version:'), value: `v${getCurrentVersion()}` },
+                { label: t('GitHub:'), value: 'github.com/Triggered0/Hex-Manager', href: 'https://github.com/Triggered0/Hex-Manager' }
+            ].forEach(({ label, value, href }) => {
                 const row = document.createElement('div');
                 const labelEl = document.createElement('span');
-                labelEl.style.color = '#5a7080';
+                labelEl.style.color = '#785a28';
                 labelEl.textContent = label + ' ';
-                let valueEl;
+                const valueEl = href ? document.createElement('a') : document.createElement('span');
                 if (href) {
-                    valueEl = document.createElement('a');
                     valueEl.href = href;
                     valueEl.target = '_blank';
-                    valueEl.style.cssText = 'color:#785a28;text-decoration:underline;cursor:pointer;';
+                    valueEl.style.cssText = 'color:#c8aa6e;text-decoration:underline;cursor:pointer;';
                 } else {
-                    valueEl = document.createElement('span');
-                    valueEl.style.color = '#7a8a9a';
+                    valueEl.style.color = '#cdbe91';
                 }
                 valueEl.textContent = value;
                 row.appendChild(labelEl);
                 row.appendChild(valueEl);
                 aboutContent.appendChild(row);
             });
-
             aboutSection.appendChild(aboutContent);
             wrap.appendChild(aboutSection);
 
-            // Developer Section (debug logs)
+            // Developer Section
             const devSection = makeSettingsSection(t('Developer'), t('Developer / debug settings. Enable to see debug logs from modules.'));
             const debugEnabled = Utils.Store.get('core', 'debugLogs') === true;
             const debugRow = document.createElement('div');
@@ -807,206 +932,12 @@ export const Modal = (function() {
             debugRow.appendChild(debugLabel);
             debugRow.appendChild(debugToggle);
             devSection.appendChild(debugRow);
-
-            
             wrap.appendChild(devSection);
-
-            // Module Visibility Section
-            const visSection = makeSettingsSection(t('Module Visibility'), t('Choose which modules appear in the sidebar. Modules with an active toggle are marked with a green dot - hidden modules can also be fully disabled so their code never runs (red dot).'));
-
-            const visDualList = document.createElement('div');
-            visDualList.style.cssText = 'display:flex;gap:12px;margin-top:10px;';
-
-            function buildVisibilityList() {
-                const _prevScrollTops = [];
-                visDualList.querySelectorAll('div[style*="overflow-y: auto"]').forEach(el => _prevScrollTops.push(el.scrollTop));
-                visDualList.innerHTML = '';
-
-                const hiddenIds = (() => {
-                    const v = Utils.Store.get('core', 'hiddenModules');
-                    return Array.isArray(v) ? new Set(v) : new Set();
-                })();
-                const disabledIds = getDisabledModuleIds();
-
-                disabledIds.forEach(id => {
-                    if (!registeredModules.some(m => m.id === id)) {
-                        registeredModules.push({
-                            id,
-                            name: (getModuleInfo()[id] || {}).name || id,
-                            description: '',
-                            settings: [],
-                            __disabledStub: true
-                        });
-                    }
-                });
-
-                const visibleMods = registeredModules.filter(m => (m.__disabledStub || (m.settings && m.settings.length > 0)) && !hiddenIds.has(m.id));
-                const hiddenMods = registeredModules.filter(m => (m.__disabledStub || (m.settings && m.settings.length > 0)) && hiddenIds.has(m.id));
-
-                function makeColumn(title, mods, actions) {
-                    const col = document.createElement('div');
-                    col.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;min-width:0;';
-
-                    const colTitle = document.createElement('div');
-                    colTitle.textContent = title;
-                    colTitle.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#c8aa6e;margin-bottom:4px;';
-                    col.appendChild(colTitle);
-
-                    const list = document.createElement('div');
-                    list.style.cssText = 'display:flex;flex-direction:column;gap:4px;min-height:80px;max-height:240px;overflow-y:auto;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:6px;';
-                    list.style.scrollbarWidth = 'thin';
-
-                    if (mods.length === 0) {
-                        const empty = document.createElement('div');
-                        empty.textContent = t('None');
-                        empty.style.cssText = 'color:#3a5060;font-size:12px;text-align:center;padding:20px 0;';
-                        list.appendChild(empty);
-                    }
-
-                    mods.forEach(mod => {
-                        const enabled = (mod.settings || []).some(s => s.type === 'toggle' && s.value === true);
-                        const isDisabled = disabledIds.has(mod.id);
-                        const item = document.createElement('div');
-                        item.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;border-radius:4px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.04);transition:background 0.15s;';
-                        item.onmouseover = () => item.style.background = 'rgba(255,255,255,0.05)';
-                        item.onmouseout = () => item.style.background = 'rgba(255,255,255,0.015)';
-
-                        const nameWrap = document.createElement('div');
-                        nameWrap.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden;';
-
-                        if (isDisabled) {
-                            const dot = document.createElement('span');
-                            dot.title = 'This module is disabled and will not load until re-enabled and restarted.';
-                            dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#c84c4c;flex-shrink:0;';
-                            nameWrap.appendChild(dot);
-                        } else if (enabled) {
-                            const dot = document.createElement('span');
-                            dot.title = 'This module has active settings';
-                            dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#0ac8b9;flex-shrink:0;';
-                            nameWrap.appendChild(dot);
-                        }
-
-                        const nameEl = document.createElement('span');
-                        nameEl.textContent = mod.name;
-                        nameEl.style.cssText = 'font-size:12px;color:#f0e6d2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' + (isDisabled ? 'opacity:0.5;' : '');
-                        nameWrap.appendChild(nameEl);
-
-                        const actionsWrap = document.createElement('div');
-                        actionsWrap.style.cssText = 'display:flex;gap:4px;flex-shrink:0;';
-
-                        actions.forEach(action => {
-                            const btn = document.createElement('button');
-                            btn.textContent = typeof action.label === 'function' ? action.label(mod) : action.label;
-                            btn.className = action.className || '';
-                            btn.style.cssText = 'flex-shrink:0;padding:2px 8px;font-size:11px;border-radius:2px;cursor:pointer;border:1px solid rgba(200,170,110,0.3);background:rgba(200,170,110,0.06);color:#c8aa6e;transition:all 0.15s;';
-                            btn.onmouseover = () => {
-                                btn.style.background = 'rgba(200,170,110,0.15)';
-                                btn.style.color = '#f0e6d2';
-                            };
-                            btn.onmouseout = () => {
-                                btn.style.background = 'rgba(200,170,110,0.06)';
-                                btn.style.color = '#c8aa6e';
-                            };
-                            btn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                action.onClick(mod.id);
-                            });
-                            actionsWrap.appendChild(btn);
-                        });
-
-                        item.appendChild(nameWrap);
-                        item.appendChild(actionsWrap);
-                        list.appendChild(item);
-                    });
-
-                    col.appendChild(list);
-                    return col;
-                }
-
-                function toggleVisibility(modId) {
-                    const current = (() => {
-                        const v = Utils.Store.get('core', 'hiddenModules');
-                        return Array.isArray(v) ? new Set(v) : new Set();
-                    })();
-
-                    const tabEl = document.querySelector(`#pm-root .pm-tab[data-target="tab-${modId}"]`);
-
-                    if (current.has(modId)) {
-                        current.delete(modId);
-                        if (tabEl) tabEl.style.display = '';
-                    } else {
-                        current.add(modId);
-                        if (tabEl) {
-                            tabEl.style.display = 'none';
-                            if (tabEl.classList.contains('active')) {
-                                document.querySelector('#pm-root .pm-tab[data-target="tab-lookup"]')?.click();
-                            }
-                        }
-                    }
-
-                    Utils.Store.set('core', 'hiddenModules', [...current]);
-                    buildVisibilityList();
-                }
-
-                function toggleDisabled(modId) {
-                    const current = getDisabledModuleIds();
-                    if (current.has(modId)) {
-                        current.delete(modId);
-                        if (!registeredModules.some(m => m.id === modId)) {
-                            registeredModules.push({
-                                id: modId,
-                                name: (getModuleInfo()[modId] || {}).name || modId,
-                                description: '',
-                                settings: [],
-                            });
-                        }
-                    } else {
-                        current.add(modId);
-                    }
-                    Utils.Store.set('core', 'disabledModules', [...current]);
-                    buildVisibilityList();
-                }
-
-                const leftCol = makeColumn(t('Visible in Menu'), visibleMods, [{
-                    label: t('Hide'),
-                    className: 'pm-vis-hide-btn',
-                    onClick: toggleVisibility
-                }]);
-                const rightCol = makeColumn(t('Hidden from Menu'), hiddenMods, [{
-                        label: (mod) => disabledIds.has(mod.id) ? t('Enable') : t('Disable'),
-                        onClick: toggleDisabled
-                    },
-                    {
-                        label: t('Show'),
-                        className: 'pm-vis-show-btn',
-                        onClick: toggleVisibility
-                    }
-                ]);
-
-                visDualList.appendChild(leftCol);
-                visDualList.appendChild(rightCol);
-
-                visDualList.querySelectorAll('div[style*="overflow-y: auto"]').forEach((el, i) => {
-                    if (_prevScrollTops[i] != null) el.scrollTop = _prevScrollTops[i];
-                });
-            }
-
-            buildVisibilityList();
-            visSection.appendChild(visDualList);
-
-            const _restartDisabledCount = getDisabledModuleIds().size;
-            if (_restartDisabledCount > 0) {
-                const restartNote = document.createElement('div');
-                restartNote.style.cssText = 'font-size:11px;color:#a09b8c;margin-top:8px;padding:6px 10px;border-radius:4px;background:rgba(200,170,110,0.06);border:1px solid rgba(200,170,110,0.15);display:flex;align-items:center;gap:6px;';
-                restartNote.innerHTML = '<span style="color:#c8aa6e;font-weight:700;">!</span> ' + t('Restart required for module enable/disable changes to take effect.');
-                visSection.appendChild(restartNote);
-            }
-
-            wrap.appendChild(visSection);
 
             container.appendChild(wrap);
         }
-        // End Settings Tab 
+
+        updateCounters();
 
         _root.appendChild(overlay);
         _root.appendChild(modal);
@@ -1044,24 +975,19 @@ export const Modal = (function() {
         if (_keydownHandler) return;
         _keydownHandler = (e) => {
             if (window._isCapturingHotkey) return;
-
             const shortcut = getMenuHotkey();
-
             if (!e.repeat &&
                 e.ctrlKey === shortcut.ctrlKey &&
                 e.shiftKey === shortcut.shiftKey &&
                 e.altKey === shortcut.altKey &&
                 e.metaKey === shortcut.metaKey &&
                 e.code === shortcut.code) {
-
-                // Prevent typing from triggering the modal
                 const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
                 if (isInput) {
                     const isSafeKey = /^F\d+$/.test(shortcut.code) || shortcut.code === 'Escape' || shortcut.code.startsWith('Arrow');
                     const hasModifier = shortcut.ctrlKey || shortcut.altKey || shortcut.metaKey;
                     if (!isSafeKey && !hasModifier) return;
                 }
-
                 e.preventDefault();
                 toggle();
             }
@@ -1079,12 +1005,5 @@ export const Modal = (function() {
         _cbs.clear();
     }
 
-    return {
-        init,
-        show,
-        hide,
-        toggle,
-        onChange,
-        destroy
-    };
+    return { init, show, hide, toggle, onChange, destroy };
 })();

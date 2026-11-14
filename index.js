@@ -10,6 +10,7 @@ import { init as initI18n } from './core/i18n.js';
 import { syncVersionWithMetadata, checkForUpdates } from './core/updater.js';
 import { registeredModules, registerModuleConfig, runModuleLifecycle, teardownModules } from './core/registry.js';
 import { Modal } from './core/ui/commandCenter.js';
+import { TopBar } from './core/ui/topBar.js';
 
 import * as autoAcceptModule from './modules/autoAccept.js';
 import * as aramNocdModule from './modules/aramNocd.js';
@@ -115,6 +116,7 @@ export async function load(context) {
     _loaded = true;
     await Utils.GameData.Assets.init();
     Modal.init();
+    TopBar.init(() => Modal.toggle());
     await syncVersionWithMetadata();
     gateOnClientReady();
     await runModuleLifecycle(MANAGED_MODULES, 'load');
@@ -123,6 +125,7 @@ export async function load(context) {
 export async function unload() {
     if (!_inited && !_loaded) return;
     await teardownModules(MANAGED_MODULES);
+    TopBar.destroy();
     Modal.destroy();
     Utils.Panic.uninstall();
     Utils.DOM.observer.disconnect();
