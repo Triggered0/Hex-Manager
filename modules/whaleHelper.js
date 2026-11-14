@@ -1870,7 +1870,7 @@ function renderOddsModal(item, odds) {
         backdropFilter: 'blur(25px) saturate(140%)',
         overflow: 'hidden',
         color: '#a09b8c',
-        fontFamily: 'var(--font-body), "Segoe UI", sans-serif'
+        fontFamily: '"Spiegel", var(--font-body), "Segoe UI", sans-serif'
     });
 
     const header = document.createElement('div');
@@ -1982,7 +1982,7 @@ function renderOddsModal(item, odds) {
         maxHeight: '85vh',
         boxShadow: '0 16px 48px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
         color: '#a09b8c',
-        fontFamily: 'var(--font-body), "Segoe UI", sans-serif'
+        fontFamily: '"Spiegel", var(--font-body), "Segoe UI", sans-serif'
     });
 
     const poolHeader = document.createElement('div');

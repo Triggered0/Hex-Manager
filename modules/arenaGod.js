@@ -194,9 +194,9 @@ function renderProgressPanel() {
 
         const savedPos = Utils.Store.get('arenaGod', POS_KEY);
         if (savedPos) {
-            progressPanel.style.cssText = `position:fixed;left:${savedPos.left};top:${savedPos.top};z-index:19000;min-width:200px;background:rgba(1,10,19,0.92);border:1px solid #785a28;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,0.45);padding:10px 12px;color:#f0e6d2;font-family:var(--font-body),sans-serif;cursor:grab;`;
+            progressPanel.style.cssText = `position:fixed;left:${savedPos.left};top:${savedPos.top};z-index:19000;min-width:200px;background:rgba(1,10,19,0.92);border:1px solid #785a28;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,0.45);padding:10px 12px;color:#f0e6d2;font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;cursor:grab;`;
         } else {
-            progressPanel.style.cssText = `position:fixed;right:1.7vw;top:80vh;z-index:19000;min-width:200px;background:rgba(1,10,19,0.92);border:1px solid #785a28;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,0.45);padding:10px 12px;color:#f0e6d2;font-family:var(--font-body),sans-serif;cursor:grab;`;
+            progressPanel.style.cssText = `position:fixed;right:1.7vw;top:80vh;z-index:19000;min-width:200px;background:rgba(1,10,19,0.92);border:1px solid #785a28;border-radius:3px;box-shadow:0 8px 24px rgba(0,0,0,0.45);padding:10px 12px;color:#f0e6d2;font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;cursor:grab;`;
         }
 
         document.body.appendChild(progressPanel);

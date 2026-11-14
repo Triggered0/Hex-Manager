@@ -683,10 +683,10 @@ export const showGameAnalysis = async () => {
         if (window.getComputedStyle(containerNode).position === 'static') {
             containerNode.style.position = 'relative';
         }
-        panel.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; background:rgba(1,10,19,0.95); padding:24px; z-index:2147483600; overflow-y:auto; color:#f0e6d2; pointer-events:auto; box-sizing:border-box; border-radius:0; font-family:var(--font-body),sans-serif; backdrop-filter:blur(25px) saturate(140%);';
+        panel.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; background:rgba(1,10,19,0.95); padding:24px; z-index:2147483600; overflow-y:auto; color:#f0e6d2; pointer-events:auto; box-sizing:border-box; border-radius:0; font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; backdrop-filter:blur(25px) saturate(140%);';
     } else {
         containerNode = document.body;
-        panel.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:85%; background:rgba(1,10,19,0.95); border:1px solid rgba(200,170,110,0.2); border-radius:12px; padding:24px; z-index:2147483600; max-height:85vh; overflow-y:auto; pointer-events:auto; box-sizing:border-box; color:#f0e6d2; font-family:var(--font-body),sans-serif; backdrop-filter:blur(25px) saturate(140%);';
+        panel.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:85%; background:rgba(1,10,19,0.95); border:1px solid rgba(200,170,110,0.2); border-radius:12px; padding:24px; z-index:2147483600; max-height:85vh; overflow-y:auto; pointer-events:auto; box-sizing:border-box; color:#f0e6d2; font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; backdrop-filter:blur(25px) saturate(140%);';
     }
 
     panel.innerHTML = `
@@ -1075,7 +1075,7 @@ export function init(context) {
             const preBadge = document.createElement('span');
             preBadge.className = 'pm-pre-badge';
             preBadge.textContent = t('PRE');
-            preBadge.style.cssText = `position:absolute; top:-4px; left:50%; transform:translateX(-50%); font-family:var(--font-body),"Segoe UI",sans-serif; font-size:11px; font-weight:900; color:${premadeColor}; text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000; text-transform:uppercase; z-index:10; pointer-events:none; letter-spacing:0.5px;`;
+            preBadge.style.cssText = `position:absolute; top:-4px; left:50%; transform:translateX(-50%); font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif; font-size:11px; font-weight:900; color:${premadeColor}; text-shadow:-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000; text-transform:uppercase; z-index:10; pointer-events:none; letter-spacing:0.5px;`;
             iconContainer.appendChild(preBadge);
         }
 
@@ -1088,7 +1088,7 @@ export function init(context) {
             const rankBadge = document.createElement('div');
             rankBadge.className = 'pm-rank-badge';
             rankBadge.textContent = statsData.rankText;
-            rankBadge.style.cssText = `position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); font-family:var(--font-body),"Segoe UI",sans-serif; font-size:9.5px; font-weight:700; color:${rankColor}; background:rgba(1,10,19,0.9); padding:2px 5px; border-radius:4px; border:1px solid ${rankColor}55; text-transform:uppercase; line-height:1; white-space:nowrap; z-index:10; pointer-events:none; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.6); letter-spacing:0.3px;`;
+            rankBadge.style.cssText = `position:absolute; bottom:-12px; left:50%; transform:translateX(-50%); font-family:"Spiegel",var(--font-body),"Segoe UI",sans-serif; font-size:9.5px; font-weight:700; color:${rankColor}; background:rgba(1,10,19,0.9); padding:2px 5px; border-radius:4px; border:1px solid ${rankColor}55; text-transform:uppercase; line-height:1; white-space:nowrap; z-index:10; pointer-events:none; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.6); letter-spacing:0.3px;`;
             iconContainer.appendChild(rankBadge);
         }
 
@@ -1099,7 +1099,7 @@ export function init(context) {
         let badgeWR = '';
         if (!statsData.empty) {
             badgeWR = `
-            <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; font-size:10px; color:#a09b8c; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+            <div style="display:inline-flex; align-items:center; gap:4px; font-family:'Spiegel',var(--font-body),'Segoe UI',sans-serif; font-size:10px; color:#a09b8c; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
                 <span style="color:${wrColor}; font-weight:700;">${statsData.wr}${t("% WR")}</span>
                 <span style="color:#746e64; font-size:9px;">${t("|")}</span>
                 <span style="font-weight:600; color:#f0e6d2;">${statsData.kda} <span style="font-size:8.5px; color:#8a9aaa;">${t("KDA")}</span></span>
@@ -1112,14 +1112,14 @@ export function init(context) {
             const champIcon = Utils.GameData.Assets?.getIcon?.('champs', statsData.mostPickedId) || `/lol-game-data/assets/v1/champion-icons/${statsData.mostPickedId}.png`;
             if (isRightSide) {
                 badgeMostPicked = `
-                <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+                <div style="display:inline-flex; align-items:center; gap:4px; font-family:'Spiegel',var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
                     <img src="${champIcon}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; border:1px solid rgba(200,170,110,0.4);">
                     <span style="font-size:10.5px; font-weight:700; color:#f0e6d2;">${statsData.mostPickedCount}x</span>
                 </div>
                 `;
             } else {
                 badgeMostPicked = `
-                <div style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
+                <div style="display:inline-flex; align-items:center; gap:4px; font-family:'Spiegel',var(--font-body),'Segoe UI',sans-serif; background:rgba(1,10,19,0.85); padding:2px 5px; border-radius:4px; border:1px solid rgba(200,170,110,0.25); white-space:nowrap; box-shadow:0 2px 4px rgba(0,0,0,0.4);">
                     <span style="font-size:10.5px; font-weight:700; color:#f0e6d2;">${statsData.mostPickedCount}x</span>
                     <img src="${champIcon}" style="width:15px; height:15px; border-radius:50%; object-fit:cover; border:1px solid rgba(200,170,110,0.4);">
                 </div>

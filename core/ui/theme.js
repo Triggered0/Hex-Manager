@@ -9,6 +9,10 @@ export const STYLE_CONTENT = `
     font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  #pm-root input, #pm-root select, #pm-root textarea {
+    font-family: "Spiegel", var(--font-body), "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
   #pm-root.pm-show {
     display: flex;
   }
@@ -69,7 +73,7 @@ export const STYLE_CONTENT = `
   }
   .pm-title {
     color: #f0e6d2;
-    font-family: "BeaufortforLOL", serif;
+    font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif;
     font-size: 18px;
     font-weight: 700;
     margin: 0;
@@ -128,7 +132,9 @@ export const STYLE_CONTENT = `
     border: 1px solid #2b3844;
     padding: 3px 8px;
     border-radius: 2px;
-    font-family: monospace;
+    font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
   }
   .pm-close {
     width: 28px;
@@ -173,7 +179,7 @@ export const STYLE_CONTENT = `
     padding: 12px 16px;
     cursor: pointer;
     color: #a09b8c;
-    font-family: "BeaufortforLOL", serif;
+    font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif;
     font-size: 13px;
     font-weight: 700;
     text-transform: uppercase;
@@ -245,7 +251,7 @@ export const STYLE_CONTENT = `
   }
   .pm-section-title {
     color: #f0e6d2;
-    font-family: "BeaufortforLOL", serif;
+    font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif;
     font-size: 17px;
     font-weight: 700;
     margin: 0 0 4px 0;
@@ -304,7 +310,7 @@ export const STYLE_CONTENT = `
   }
   .hm-mod-title {
     color: #f0e6d2;
-    font-family: "BeaufortforLOL", serif;
+    font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif;
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.6px;
@@ -366,7 +372,7 @@ export const STYLE_CONTENT = `
   .pm-search { display: flex; gap: 8px; margin-bottom: 12px; }
   .pm-input { flex: 1; background: #050e17; border: 1px solid #463714; color: #f0e6d2; padding: 8px 14px; border-radius: 2px; outline: none; font-size: 13px; transition: border-color 0.2s; }
   .pm-input:focus { border-color: #c8aa6e; }
-  .pm-btn { background: linear-gradient(180deg, #1e2328 0%, #0f171e 100%); border: 1px solid #785a28; color: #cdbe91; padding: 7px 14px; cursor: pointer; border-radius: 2px; font-family: "BeaufortforLOL", serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; transition: all 0.15s ease; font-size: 12px; }
+  .pm-btn { background: linear-gradient(180deg, #1e2328 0%, #0f171e 100%); border: 1px solid #785a28; color: #cdbe91; padding: 7px 14px; cursor: pointer; border-radius: 2px; font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; transition: all 0.15s ease; font-size: 12px; }
   .pm-btn:hover { background: linear-gradient(180deg, #2a3038 0%, #17222c 100%); color: #f0e6d2; border-color: #c8aa6e; box-shadow: 0 0 8px rgba(200, 170, 110, 0.25); }
   .pm-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(200, 170, 110, 0.08); border-radius: 2px; transition: all 0.15s ease; }
   .pm-row:hover { border-color: rgba(200, 170, 110, 0.22); }
@@ -382,7 +388,7 @@ export const STYLE_CONTENT = `
   /* Settings tab */
   .pm-tab-settings { margin-top: auto; border-top: 1px solid #2c281d; }
   .pm-settings-section { margin-bottom: 22px; background: #05101a; border: 1px solid #1e282d; border-left: 2px solid #785a28; padding: 14px 16px; border-radius: 2px; }
-  .pm-settings-section-title { color: #c8aa6e; font-family: "BeaufortforLOL", serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .pm-settings-section-title { color: #c8aa6e; font-family: "BeaufortforLOL", "Spiegel", var(--font-display), "Segoe UI", sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
   .pm-settings-section-desc { color: #7e7968; font-size: 12px; line-height: 1.5; margin-bottom: 10px; }
   .pm-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 10px 12px; border: 1px solid rgba(200, 170, 110, 0.08); border-radius: 2px; background: rgba(1, 10, 19, 0.6); }
   .plugins-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding: 10px 12px; border: 1px solid rgba(200, 170, 110, 0.08); border-radius: 2px; background: rgba(1, 10, 19, 0.6); color: #a09b8c; }
