@@ -174,7 +174,7 @@ export const Modal = (function() {
                 };
 
                 resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
-                import('./modules/gameAnalysisPopup.js').then(mod => {
+                import('../../modules/gameAnalysisPopup.js').then(mod => {
                     mod.MatchHistoryModal.show(finalPlayer, '');
                 });
                 setTimeout(() => {
@@ -235,7 +235,7 @@ export const Modal = (function() {
                     } catch (e) {}
 
                     resultDiv.innerHTML = '<div style="color:#0ac8b9">' + t('Loading Match History...') + '</div>';
-                    import('./modules/gameAnalysisPopup.js').then(mod => {
+                    import('../../modules/gameAnalysisPopup.js').then(mod => {
                         mod.MatchHistoryModal.show(finalPlayer, '', selectedRegion);
                     });
                     setTimeout(() => {

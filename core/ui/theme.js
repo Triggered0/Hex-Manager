@@ -63,5 +63,4 @@ export const STYLE_CONTENT = `
       .pm-update-link { font-size: 12px; color: #785a28; text-decoration: underline; cursor: pointer; }
       .pm-update-check-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
       .pm-update-check-status { font-size: 12px; color: #4a6070; }
-      `;
 `;
