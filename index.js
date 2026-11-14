@@ -31,6 +31,12 @@ import * as modeSelectorTweaksModule from './modules/modeSelectorTweaks.js';
 import * as nameSpooferModule from './modules/nameSpoofer.js';
 import * as useClientDuringGameModule from './modules/useClientDuringGame.js';
 import * as autoRuneImporterModule from './modules/autoRuneImporter.js';
+import * as betterClientModule from './modules/betterClient.js';
+import * as autoReadModule from './modules/autoRead.js';
+import * as autoClaimerModule from './modules/autoClaimer.js';
+import * as hideUnownedSkinsModule from './modules/hideUnownedSkins.js';
+import * as banBlockerModule from './modules/banBlocker.js';
+import * as unlockProfileSkinsModule from './modules/unlockProfileSkins.js';
 
 await initI18n();
 
@@ -53,7 +59,13 @@ const MANAGED_MODULES = Object.freeze([
     ['modeSelectorTweaks', modeSelectorTweaksModule],
     ['nameSpoofer', nameSpooferModule],
     ['useClientDuringGame', useClientDuringGameModule],
-    ['autoRuneImporter', autoRuneImporterModule]
+    ['autoRuneImporter', autoRuneImporterModule],
+    ['betterClient', betterClientModule],
+    ['autoRead', autoReadModule],
+    ['autoClaimer', autoClaimerModule],
+    ['hideUnownedSkins', hideUnownedSkinsModule],
+    ['banBlocker', banBlockerModule],
+    ['unlockProfileSkins', unlockProfileSkinsModule]
 ]);
 
 let _inited = false;
@@ -77,10 +89,7 @@ export async function init(ctx) {
     } catch (_) {}
 
     const managerApi = {
-        init,
-        load,
-        unload,
-        __isLoader: true,
+        init, load, unload, __isLoader: true,
         show: () => Modal.show(),
         hide: () => Modal.hide(),
         toggle: () => Modal.toggle(),
@@ -95,7 +104,6 @@ export async function init(ctx) {
 
     window.HexManager = managerApi;
     window.SnoozeManager = managerApi;
-
     await runModuleLifecycle(MANAGED_MODULES, 'init', [ctx]);
 }
 

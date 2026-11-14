@@ -2178,6 +2178,203 @@ const WSHook = {
     }
 };
 
+/**
+ * RCP DataBinding Hook (Plugin-scoped ResourceCache transforms)
+ */
+const DataBindingHook = {
+    _rules: new Set(),
+    _caches: new Set(),
+    _setupPromise: null,
+
+    whenRcpReady(name, timeout = 15000) {
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+                settled = true;
+                reject(new Error(`Timed out waiting for ${name}`));
+            }, timeout);
+            const attempt = () => {
+                if (settled) return;
+                if (typeof window !== 'undefined' && window.rcp?.whenReady) {
+                    window.rcp.whenReady(name).then(
+                        (api) => {
+                            if (settled) return;
+                            settled = true;
+                            clearTimeout(timer);
+                            resolve(api);
+                        },
+                        (error) => {
+                            if (settled) return;
+                            settled = true;
+                            clearTimeout(timer);
+                            reject(error);
+                        }
+                    );
+                } else {
+                    setTimeout(attempt, 250);
+                }
+            };
+            attempt();
+        });
+    },
+
+    _ruleAppliesTo(rule, owner) {
+        return Boolean(owner) && rule.identifier === owner.identifier && (!rule.base || rule.base === owner.base);
+    },
+
+    _rulesFor(owner) {
+        if (!owner) return null;
+        const list = [];
+        for (const rule of this._rules) {
+            if (this._ruleAppliesTo(rule, owner)) list.push(rule);
+        }
+        return list.length ? list : null;
+    },
+
+    _applyRules(rules, path, data) {
+        let out = data;
+        for (const rule of rules) {
+            let hit = false;
+            try {
+                hit = rule.match(path);
+            } catch (_) {}
+            if (!hit) continue;
+            try {
+                const next = rule.transform(out, path);
+                if (next !== undefined) out = next;
+            } catch (error) {
+                Debug.error(`[DataBindingHook] Transform for ${path} failed:`, error);
+            }
+        }
+        return out;
+    },
+
+    _rewriteCachedPaths(cache, predicate, reload = false) {
+        const data = cache?._data;
+        if (!(data instanceof Map)) return;
+        for (const [path, entry] of [...data]) {
+            if (!entry || entry.data == null || !predicate(path)) continue;
+            try {
+                if (reload && typeof cache._resourceRead === 'function') {
+                    cache._resourceRead(path);
+                } else if (typeof cache._cacheWrite === 'function') {
+                    cache._cacheWrite(path, entry.data, entry.timestamp);
+                }
+            } catch (error) {
+                Debug.error(`[DataBindingHook] Could not refresh ${path}:`, error);
+            }
+        }
+    },
+
+    _adoptCache(cache, binding) {
+        const owner = {
+            identifier: binding?.options?.identifier ?? null,
+            base: binding?.basePath ?? null
+        };
+        if (!owner.identifier) {
+            cache.__hmOwner = null;
+            return;
+        }
+        cache.__hmOwner = owner;
+        cache.__hmRules = this._rulesFor(owner);
+        this._caches.add(cache);
+        if (cache.__hmRules) {
+            const rules = cache.__hmRules;
+            this._rewriteCachedPaths(cache, (path) => rules.some((rule) => rule.match(path)));
+        }
+    },
+
+    _ensureSetup() {
+        if (this._setupPromise) return this._setupPromise;
+        const self = this;
+        this._setupPromise = (async () => {
+            const libs = await self.whenRcpReady('rcp-fe-common-libs', 60000);
+            const factory = await libs.getDataBinding('rcp-fe-hex-manager');
+            const probe = factory('/hex-manager-probe');
+            const bindingProto = Object.getPrototypeOf(probe);
+            const probeCache = probe._getCache('/hex-manager-probe/state');
+            const cacheProto = probeCache ? Object.getPrototypeOf(probeCache) : null;
+            if (
+                typeof bindingProto?._getCache !== 'function' ||
+                typeof cacheProto?._cacheWrite !== 'function' ||
+                !(probeCache._data instanceof Map)
+            ) {
+                throw new Error('LCU DataBinding prototype layout changed.');
+            }
+            if (!bindingProto._getCache.__hmPatched) {
+                const getCache = bindingProto._getCache;
+                const patchedGetCache = function(path) {
+                    const cache = getCache.call(this, path);
+                    if (cache && typeof cache === 'object') {
+                        const owner = cache.__hmOwner;
+                        if (owner === undefined) {
+                            self._adoptCache(cache, this);
+                        } else if (owner && owner.identifier !== this.options?.identifier) {
+                            cache.__hmOwner = null;
+                            cache.__hmRules = null;
+                            self._caches.delete(cache);
+                        }
+                    }
+                    return cache;
+                };
+                patchedGetCache.__hmPatched = true;
+                bindingProto._getCache = patchedGetCache;
+
+                const write = cacheProto._cacheWrite;
+                const patchedWrite = function(path, data, stamp, error) {
+                    const rules = this.__hmRules;
+                    if (rules && !error && data != null) {
+                        data = self._applyRules(rules, path, data);
+                    }
+                    return write.call(this, path, data, stamp, error);
+                };
+                patchedWrite.__hmPatched = true;
+                cacheProto._cacheWrite = patchedWrite;
+            }
+        })();
+        this._setupPromise.catch((error) => Debug.error('[DataBindingHook] Setup failed:', error));
+        return this._setupPromise;
+    },
+
+    _refreshRule(rule, removed = false) {
+        for (const cache of this._caches) {
+            const owner = cache.__hmOwner;
+            if (!this._ruleAppliesTo(rule, owner)) continue;
+            cache.__hmRules = this._rulesFor(owner);
+            const matches = (path) => {
+                try {
+                    return rule.match(path);
+                } catch (_) {
+                    return false;
+                }
+            };
+            this._rewriteCachedPaths(cache, matches, removed);
+        }
+    },
+
+    transformBinding({ identifier, base = null, match, transform }) {
+        if (!identifier || typeof match !== 'function' || typeof transform !== 'function') {
+            throw new Error('[DataBindingHook] transformBinding requires identifier, match, and transform.');
+        }
+        const rule = { identifier, base, match, transform };
+        this._rules.add(rule);
+        const ready = this._ensureSetup().then(() => {
+            if (this._rules.has(rule)) this._refreshRule(rule);
+        });
+        ready.catch(() => {});
+        return {
+            ready,
+            reapply: () => {
+                if (this._rules.has(rule)) this._refreshRule(rule);
+            },
+            dispose: () => {
+                if (!this._rules.delete(rule)) return;
+                this._refreshRule(rule, true);
+            }
+        };
+    }
+};
+
 const Store = {
     MAIN_KEY: 'Hex-Store',
     _cache: null,
@@ -2652,7 +2849,8 @@ export const Utils = {
         Ember: EmberHook,
         Fetch: FetchHook,
         Xhr: XhrHook,
-        WS: WSHook
+        WS: WSHook,
+        DataBinding: DataBindingHook
     },
     Debug,
     LCU,

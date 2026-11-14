@@ -56,7 +56,13 @@ export function getModuleInfo() {
         modeSelectorTweaks: { name: t('Mode Selector Tweaks') },
         nameSpoofer: { name: t('Name Spoofer') },
         useClientDuringGame: { name: t('Use Client In Game') },
-        autoRuneImporter: { name: t('Auto Rune & Spells') }
+        autoRuneImporter: { name: t('Auto Rune & Spells') },
+        betterClient: { name: t('BetterClient') },
+        autoRead: { name: t('Auto Read') },
+        autoClaimer: { name: t('Auto Claimer') },
+        hideUnownedSkins: { name: t('Hide Unowned Skins') },
+        banBlocker: { name: t('Ban Blocker') },
+        unlockProfileSkins: { name: t('Unlock Profile Skins') }
     };
 }
 

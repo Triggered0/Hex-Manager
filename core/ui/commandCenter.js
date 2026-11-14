@@ -17,7 +17,7 @@ const CATEGORY_DEFINITIONS = [
         titleKey: 'Champ Select',
         subtitleKey: 'Dodge button, automatic runes/spells/items, pick/ban lock, and balance info.',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L19 7V17L12 22L5 17V7L12 2Z"/><circle cx="12" cy="12" r="3"/></svg>',
-        moduleIds: ['champSelectQuitButton', 'autoRuneImporter', 'autoLockChampion', 'aramNocd', 'SnoozeBalanceTooltip']
+        moduleIds: ['champSelectQuitButton', 'banBlocker', 'hideUnownedSkins', 'autoRuneImporter', 'autoLockChampion', 'aramNocd', 'SnoozeBalanceTooltip']
     },
     {
         id: 'cat-match',
@@ -31,7 +31,7 @@ const CATEGORY_DEFINITIONS = [
         titleKey: 'Profile & Client',
         subtitleKey: 'Profile rank/background spoofing, custom status, social roster, loot, and window sizing.',
         icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-        moduleIds: ['profileTweaks', 'customOnlineStatus', 'socialPanelTweaks', 'nameSpoofer', 'clientWindowTweaks', 'whaleHelper']
+        moduleIds: ['betterClient', 'autoRead', 'autoClaimer', 'unlockProfileSkins', 'profileTweaks', 'customOnlineStatus', 'socialPanelTweaks', 'nameSpoofer', 'clientWindowTweaks', 'whaleHelper']
     }
 ];
 
